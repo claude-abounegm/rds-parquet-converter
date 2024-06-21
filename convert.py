@@ -27,6 +27,7 @@ def process_parent_directory(parent_directory, output_directory):
     # Extract the parent directory name for the CSV file
     base_dir_name = os.path.basename(parent_directory)
     csv_file_name = f"{base_dir_name}.csv"
+    sql_file_name = f"{base_dir_name}.sql"
 
     # Ensure the output directory exists
     os.makedirs(output_directory, exist_ok=True)
@@ -34,6 +35,16 @@ def process_parent_directory(parent_directory, output_directory):
     # Save the combined DataFrame to a single CSV file in the output directory
     output_path = os.path.join(output_directory, csv_file_name)
     combined_df.to_csv(output_path, index=False)
+
+    # Generate SQL insert statements
+    sql_output_path = os.path.join(output_directory, sql_file_name)
+    schema, table = base_dir_name.split('.')
+    table_name = f"`{schema}`.`{table}`"
+    with open(sql_output_path, 'w') as sql_file:
+        for _, row in combined_df.iterrows():
+            columns = ', '.join([f'`{col}`' for col in combined_df.columns])
+            values = ', '.join([f"'{str(val).replace('\'', '\'\'')}'" if pd.notnull(val) else 'NULL' for val in row])
+            sql_file.write(f"INSERT INTO {table_name} ({columns}) VALUES ({values});\n")
 
 # Base path containing the Parquet files
 base_path = "./db-files"
